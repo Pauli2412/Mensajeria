@@ -1,0 +1,97 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String          @id @default(cuid())
+  phone         String          @unique
+  nombre        String?
+  cuil          String?
+  plataformas   String?
+  conversaciones Conversation[]
+  accounts      PlatformAccount[]
+  tokens        ApiToken[]
+  deposits      Deposit[]
+  complaints    Complaint[]
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+}
+
+
+model Conversation {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mensajes  Message[]
+  estado    String    @default("abierta")
+  createdAt DateTime  @default(now())
+}
+
+
+model Message {
+  id              String        @id @default(cuid())
+  conversationId  String
+  conversation    Conversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  rol             String
+  contenido       String
+  createdAt       DateTime      @default(now())
+}
+
+model PlatformAccount {
+  id      String  @id @default(cuid())
+  userId  String
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tipo    String
+  handle  String
+}
+
+model ApiToken {
+  id      String  @id @default(cuid())
+  userId  String?
+  user    User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  token   String  @unique
+  activo  Boolean @default(true)
+}
+
+model Deposit {
+  id       String   @id @default(cuid())
+  userId   String?
+  user     User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  monto    Float
+  estado   String
+  createdAt DateTime @default(now())
+}
+
+model Complaint {
+  id       String   @id @default(cuid())
+  userId   String?
+  user     User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  mensaje  String
+  estado   String
+  createdAt DateTime @default(now())
+}
+
+model Admin {
+  id       String  @id @default(cuid())
+  user     String  @unique
+  passHash String
+  rol      String
+  email    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AdminUser {
+  id        String   @id @default(cuid())
+  user      String   @unique
+  passHash  String
+  email     String?
+  role      String   @default("admin")
+  createdAt DateTime @default(now())
+}
+
