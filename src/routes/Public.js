@@ -11,25 +11,50 @@ const r = Router();
 
 r.post("/login", async (req, res) => {
   try {
-    const { phone } = req.body;
-    if (!phone) {
-      return res.status(400).json({ ok: false, error: "phone requerido" });
-    }
+    let { phone } = req.body;
+    if (!phone) return res.status(400).json({ ok: false, reply: "⚠️ Teléfono requerido" });
 
-    const user = await prisma.user.upsert({
-      where: { phone },
-      update: {},
-      create: { phone }
+    phone = normalizePhone(phone);
+
+    const user = await prisma.user.findFirst({
+      where: {
+        phone, // ya está limpio
+      },
     });
 
-    res.json({ ok: true, user });
+    if (user) {
+      return res.json({
+        ok: true,
+        reply: "✅ Usuario detectado",
+        usuario: {
+          nombre: user.nombre,
+          telefono: user.phone,
+          cuil: user.cuil,
+          plataformas: user.plataformas ? user.plataformas.split(",") : [],
+        },
+      });
+    }
+
+    // No encontrado → sugerir registro
+    return res.json({
+      ok: false,
+      reply: "⚠️ No encontramos tu usuario. ¿Deseas registrarte?",
+      options: ["Iniciar registro", "Cancelar"],
+    });
   } catch (e) {
     console.error("❌ Error en /login:", e);
-    res.status(500).json({ ok: false, error: e.message });
+    res.status(500).json({ ok: false, reply: e.message });
   }
 });
 
+
+function normalizePhone(phone) {
+  return (phone || "").replace(/\D/g, ""); 
+}
+
+
 r.post("/retiro", async (req, res) => {
+  const telefono = normalizePhone(req.body.telefono);
   try {
     const { phone, monto, plataforma } = req.body;
     if (!phone || !monto || !plataforma) {
@@ -54,6 +79,7 @@ r.post("/retiro", async (req, res) => {
 });
 
 r.get('/historial', async (req, res) => {
+  const telefono = normalizePhone(req.body.telefono);
   try {
     const { phone } = req.query;
     if (!phone) return res.status(400).json({ ok:false, error:'phone requerido' });
@@ -75,6 +101,7 @@ r.get('/historial', async (req, res) => {
 
 
 r.post('/reclamo', async (req, res, next) => {
+  const telefono = normalizePhone(req.body.telefono);
   try {
     const { phone, text, meta } = req.body || {};
     if (!phone || !text) {
