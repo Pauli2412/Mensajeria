@@ -181,5 +181,39 @@ r.post('/conversations/:id/close', requireAdmin, async (req, res) => {
   }
 });
 
+r.get('/pending-users', requireAdmin, async (req, res) => {
+  try {
+    const users = await prisma.user.findMany({
+      where: { estado: "pendiente" },
+      select: { id: true, phone: true, nombre: true, cuil: true, plataformas: true, estado: true },
+    });
+    res.json({ ok: true, users });
+  } catch (e) {
+    console.error("❌ /admin/pending-users:", e);
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+r.post('/approve-user', requireAdmin, async (req, res) => {
+  try {
+    const { userId, accion } = req.body || {};
+    if (!userId || !accion) {
+      return res.status(400).json({ ok: false, error: "userId y accion requeridos" });
+    }
+
+    const nuevoEstado = accion === "aprobar" ? "activo" : "rechazado";
+    const user = await prisma.user.update({
+      where: { id: userId },
+      data: { estado: nuevoEstado },
+    });
+
+    res.json({ ok: true, userId: user.id, estado: user.estado });
+  } catch (e) {
+    console.error("❌ /admin/approve-user:", e);
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+
 export default r;
 

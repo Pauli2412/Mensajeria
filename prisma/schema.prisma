@@ -20,7 +20,11 @@ model User {
   complaints    Complaint[]
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
+
+  // 🔹 Nuevo campo
+  estado        String          @default("pendiente")
 }
+
 
 
 model Conversation {
