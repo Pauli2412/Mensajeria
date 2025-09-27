@@ -8,7 +8,7 @@ import cron from "node-cron";
 import { syncSheets } from "./services/syncService.js"; 
 import cors from "cors";
 import chatRoutes from "./routes/chat.js";
-
+import adminRespondRoutes from "./routes/adminRespond.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -31,6 +31,7 @@ app.options("*", cors());
 app.use("/admin", adminRoutes);
 app.use("/", publicRoutes);
 app.use("/", chatRoutes);
+app.use("/api/admin", adminRespondRoutes);
 
 
 // prueba rápida
