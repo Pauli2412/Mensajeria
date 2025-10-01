@@ -25,6 +25,14 @@ model User {
   estado        String          @default("pendiente")
 }
 
+enum ConversationStatus {
+  OPEN
+  WAITING_USER
+  WAITING_ADMIN
+  NEW_USER_PENDING
+  HANDOFF
+  CLOSED
+}
 
 
 model Conversation {
@@ -38,12 +46,12 @@ model Conversation {
 
 
 model Message {
-  id              String        @id @default(cuid())
-  conversationId  String
-  conversation    Conversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  rol             String
-  contenido       String
-  createdAt       DateTime      @default(now())
+  id             String   @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  rol            String
+  contenido      String
+  createdAt      DateTime @default(now())
 }
 
 model PlatformAccount {
@@ -78,16 +86,6 @@ model Complaint {
   mensaje  String
   estado   String
   createdAt DateTime @default(now())
-}
-
-model Admin {
-  id       String  @id @default(cuid())
-  user     String  @unique
-  passHash String
-  rol      String
-  email    String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 }
 
 model AdminUser {

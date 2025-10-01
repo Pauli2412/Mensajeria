@@ -5,8 +5,6 @@ const prisma = new PrismaClient();
 
 // URL del webhook de n8n que devuelve los usuarios de BaseUsuarios
 const BASE_USUARIOS_WEBHOOK = process.env.N8N_BASEUSUARIOS_WEBHOOK;
-// ejemplo en .env:
-// N8N_BASEUSUARIOS_WEBHOOK=https://infinitycta.app.n8n.cloud/webhook-test/base-usuarios
 
 export async function syncUsersFromSheets() {
   try {

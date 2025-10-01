@@ -77,7 +77,7 @@ r.get('/conversations', requireAdmin, async (req, res) => {
       createdAt: c.createdAt,
       user: c.user,
       totalMensajes: c._count.mensajes,
-      ultimoMensaje: c.mensajes[0] || null,
+      ultimoMensaje: c.mensajes[0] ? formatMessage(c.mensajes[0]) : null,
     }));
 
     res.json({ ok: true, conversations: data });
@@ -108,7 +108,8 @@ r.get('/conversations/:id', requireAdmin, async (req, res) => {
       estado: conv.estado,
       createdAt: conv.createdAt,
       user: conv.user,
-      mensajes: conv.mensajes,
+      mensajes: conv.mensajes.map(formatMessage),
+
     }});
   } catch (e) {
     console.error('❌ /admin/conversations/:id:', e);
@@ -156,7 +157,7 @@ r.post('/respond', requireAdmin, async (req, res) => {
       console.error('⚠️ Error notificando a n8n:', e.message);
     }
 
-    res.json({ ok:true, message: msg, n8n });
+    res.json({ ok:true, message: formatMessage(msg), n8n });
   } catch (e) {
     console.error('❌ /admin/respond:', e);
     res.status(500).json({ ok:false, error: e.message });
@@ -213,6 +214,7 @@ r.post('/approve-user', requireAdmin, async (req, res) => {
     res.status(500).json({ ok: false, error: e.message });
   }
 });
+
 
 
 export default r;

@@ -9,6 +9,7 @@ import { syncSheets } from "./services/syncService.js";
 import cors from "cors";
 import chatRoutes from "./routes/chat.js";
 import adminRespondRoutes from "./routes/adminRespond.js";
+import adminUserRoutes from "./routes/AdminUsers.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -32,6 +33,7 @@ app.use("/admin", adminRoutes);
 app.use("/", publicRoutes);
 app.use("/", chatRoutes);
 app.use("/api/admin", adminRespondRoutes);
+app.use("/admin", adminUserRoutes);
 
 
 // prueba rápida
