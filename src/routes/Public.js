@@ -1,14 +1,16 @@
 import { Router } from 'express';
 import { chatIn, sendComplaint, sendWithdrawRequest } from '../services/n8nClient.js';
-import { getHistoryByPhone } from '../services/depositoClient.js';
-import { logMessage } from '../services/chatStore.js';
 import { upsertUserByPhone } from '../services/userRepo.js';
 import { ensureOpenConversation, addMessage } from '../services/conversationRepo.js';
-import prisma  from "../services/db.js";
-
+import prisma from "../services/db.js";
 
 const r = Router();
 
+function normalizePhone(phone) {
+  return (phone || "").replace(/\D/g, ""); 
+}
+
+// 📌 LOGIN
 r.post("/login", async (req, res) => {
   try {
     let { phone } = req.body;
@@ -16,11 +18,7 @@ r.post("/login", async (req, res) => {
 
     phone = normalizePhone(phone);
 
-    const user = await prisma.user.findFirst({
-      where: {
-        phone, // ya está limpio
-      },
-    });
+    const user = await prisma.user.findFirst({ where: { phone } });
 
     if (user) {
       return res.json({
@@ -35,7 +33,6 @@ r.post("/login", async (req, res) => {
       });
     }
 
-    // No encontrado → sugerir registro
     return res.json({
       ok: false,
       reply: "⚠️ No encontramos tu usuario. ¿Deseas registrarte?",
@@ -47,24 +44,20 @@ r.post("/login", async (req, res) => {
   }
 });
 
-
-function normalizePhone(phone) {
-  return (phone || "").replace(/\D/g, ""); 
-}
-
-
+// 📌 RETIRO
 r.post("/retiro", async (req, res) => {
-  const telefono = normalizePhone(req.body.telefono);
   try {
     const { phone, monto, plataforma } = req.body;
     if (!phone || !monto || !plataforma) {
       return res.status(400).json({ ok: false, error: "phone, monto, plataforma requeridos" });
     }
 
+    const cleanPhone = normalizePhone(phone);
+
     const user = await prisma.user.upsert({
-      where: { phone },
+      where: { phone: cleanPhone },
       update: {},
-      create: { phone }
+      create: { phone: cleanPhone }
     });
 
     const retiro = await prisma.deposit.create({
@@ -78,13 +71,14 @@ r.post("/retiro", async (req, res) => {
   }
 });
 
+// 📌 HISTORIAL
 r.get('/historial', async (req, res) => {
-  const telefono = normalizePhone(req.body.telefono);
   try {
     const { phone } = req.query;
     if (!phone) return res.status(400).json({ ok:false, error:'phone requerido' });
 
-    const user = await prisma.user.findUnique({ where: { phone } });
+    const cleanPhone = normalizePhone(phone);
+    const user = await prisma.user.findUnique({ where: { phone: cleanPhone } });
     if (!user) return res.json({ ok:true, history: [] });
 
     const deposits = await prisma.deposit.findMany({
@@ -99,23 +93,22 @@ r.get('/historial', async (req, res) => {
   }
 });
 
-
-r.post('/reclamo', async (req, res, next) => {
-  const telefono = normalizePhone(req.body.telefono);
+// 📌 RECLAMO
+r.post('/reclamo', async (req, res) => {
   try {
     const { phone, text, meta } = req.body || {};
     if (!phone || !text) {
       return res.status(400).json({ ok:false, error:'phone y text requeridos' });
     }
 
-    // 📌 Aseguramos que el usuario exista
+    const cleanPhone = normalizePhone(phone);
+
     const user = await prisma.user.upsert({
-      where: { phone },
+      where: { phone: cleanPhone },
       update: {},
-      create: { phone }
+      create: { phone: cleanPhone }
     });
 
-    // 📌 Guardamos el reclamo en la BDD
     const complaint = await prisma.complaint.create({
       data: {
         userId: user.id,
@@ -124,11 +117,17 @@ r.post('/reclamo', async (req, res, next) => {
       }
     });
 
-    // 📌 Log interno
-    logMessage(phone, 'me', `[RECLAMO] ${text}`);
+    // antes: logMessage(phone, 'me', `[RECLAMO] ${text}`);
+    // ahora guardamos también en conversación opcional
+    await prisma.message.create({
+      data: {
+        conversationId: await ensureOpenConversation(user.id),
+        rol: "user",
+        contenido: `[RECLAMO] ${text}`
+      }
+    });
 
-    // 📌 También lo mandamos a n8n
-    const resp = await sendComplaint({ phone, text, meta });
+    const resp = await sendComplaint({ phone: cleanPhone, text, meta });
 
     res.json({ ok:true, complaint, n8n: resp });
   } catch (e) {
@@ -136,8 +135,5 @@ r.post('/reclamo', async (req, res, next) => {
     res.status(500).json({ ok:false, error: e.message });
   }
 });
-
-
-
 
 export default r;
